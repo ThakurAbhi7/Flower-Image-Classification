@@ -127,6 +127,7 @@ def test(model, testloader, gpu):
     
 def save_model(model, layer_size, arch):
     
+    model.cpu()
     checkpoint = {'number_of_layer': 3,
               'layer_size': layer_size,
               'pretrain_model': arch,
