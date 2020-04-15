@@ -38,16 +38,16 @@ def preprocess_data(data_dir):
     validloader = torch.utils.data.DataLoader(test_data, batch_size=64)
     testloader = torch.utils.data.DataLoader(test_data, batch_size=64)
     
-    return trainloader, validloader, testloader
+    return train_data.class_to_idx, trainloader, validloader, testloader
 
 def make_model(arch):
     
     if arch == 'vgg13':
-        model = models.vgg13(pretrained = True)
+        model = getattr(models, arch)(pretrained=True)
         layer_size = [25088, 500, 200 ,102]
 
     elif arch == 'alexnet':
-        model = models.alexnet(pretrained = True)
+        model = getattr(models, arch)(pretrained=True)
         layer_size = [9216, 500, 200 ,102]
     
     for param in model.parameters():
@@ -130,8 +130,9 @@ def save_model(model, layer_size, arch):
     model.cpu()
     checkpoint = {'number_of_layer': 3,
               'layer_size': layer_size,
-              'pretrain_model': arch,
-              'state_dict': model.state_dict()}
+              'arch': arch,
+              'state_dict': model.state_dict(),
+              'class_to_idx': class_to_idx}
     torch.save(checkpoint, 'checkpoint.pth')
 
 def parse_args():
@@ -155,9 +156,12 @@ if __name__ == '__main__':
     torch.manual_seed(42)
     torch.backends.cudnn.deterministic = True
     
-    trainloader, validloader, testloader = preprocess_data(args.data_dir)
+    class_to_idx, trainloader, validloader, testloader = preprocess_data(args.data_dir)
     
     model, layer_size = make_model(args.arch)  
+
+    if torch.cuda.is_available() == False:
+        args.gpu =False
 
     if args.gpu == True:
         model = model.cuda()
@@ -169,5 +173,5 @@ if __name__ == '__main__':
     
     test(model, testloader, args.gpu)
         
-    save_model(model, layer_size, args.arch)
+    save_model(model, layer_size, args.arch, class_to_idx)
   

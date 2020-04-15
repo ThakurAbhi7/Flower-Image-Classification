@@ -11,10 +11,10 @@ import pandas as pd
 
 def load_model(filepath):
     checkpoint = torch.load(filepath)
-    if checkpoint['pretrain_model'] == 'vgg13':
-        model = models.vgg(pretrain = True)
-    elif checkpoint['pretrain_model'] == 'alexnet':
-        model = models.vgg(alexnet = True)
+    if checkpoint['arch'] == 'vgg13':
+        model = getattr(models, arch)(pretrained=True)
+    elif checkpoint['arch'] == 'alexnet':
+        model = getattr(models, arch)(pretrained=True)
     layer_size = checkpoint['layer_size']
     model.classifier = nn.Sequential(OrderedDict([
                           ('fc1', nn.Linear(layer_size[0], layer_size[1])),
@@ -24,6 +24,7 @@ def load_model(filepath):
                           ('fc3', nn.Linear(layer_size[2], layer_size[3])),
                           ('output', nn.LogSoftmax(dim=1))
                           ]))
+    model.class_to_idx = checkpoint['class_to_idx']
     model.load_state_dict(checkpoint['state_dict'])
 
     return model
@@ -57,10 +58,10 @@ def predict(image_path, model, cat_to_name, topk=5, gpu = True):
     top_class = top_class.cpu()
     predict_class = [None]*topk 
     predict_prob = [None]*topk 
+    class_to_idx = dict(map(reversed, model.class_to_idx.items()))
     for i, cat in enumerate(top_class[0]):
-        predict_class[i] = cat_to_name[str(cat.item() + 1)]
+        predict_class[i] = cat_to_name[class_to_idx[cat.item()]]
         predict_prob[i] = top_p[0][i].item()
-    plt.figure()
     s = pd.Series(predict_prob, index = predict_class)
     print(s,top_p, top_class)
 
